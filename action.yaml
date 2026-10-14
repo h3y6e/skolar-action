@@ -1,0 +1,109 @@
+name: skolar-action
+description: Run skolar update and create a pull request if needed.
+
+inputs:
+  token:
+    description: GitHub token used for gh, git push, and pull request creation. When omitted, the action uses the workflow GITHUB_TOKEN.
+    required: false
+  version:
+    description: skolar release tag to install, e.g. v2026.10.0. When empty, the latest release is used.
+    required: false
+    default: ""
+  dir:
+    description: Destination directory for installed skills. When empty, skolar uses its default.
+    required: false
+    default: ""
+  branch:
+    description: The pull request branch name.
+    required: false
+    default: skolar-action/patch
+  commit-message:
+    description: The message to use when committing changes.
+    required: false
+    default: "[skolar-action] automated change"
+  title:
+    description: The title of the pull request.
+    required: false
+    default: Changes by skolar-action
+  body:
+    description: The body of the pull request.
+    required: false
+    default: "Automated changes by [skolar-action](https://github.com/h3y6e/skolar-action)"
+
+outputs:
+  pr-number:
+    description: The pull request number.
+    value: ${{ steps.pr.outputs.pr-number }}
+  pr-url:
+    description: The pull request URL.
+    value: ${{ steps.pr.outputs.pr-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install skolar
+      run: |
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64) platform=linux_amd64 ;;
+          Linux-ARM64) platform=linux_arm64 ;;
+          macOS-X64) platform=darwin_amd64 ;;
+          macOS-ARM64) platform=darwin_arm64 ;;
+          *) echo "::error::Unsupported runner: $RUNNER_OS $RUNNER_ARCH"; exit 1 ;;
+        esac
+        tag=${INPUT_VERSION:-$(gh release view --repo h3y6e/skolar --json tagName -q .tagName)}
+        dir="$RUNNER_TEMP/skolar"
+        gh release download "$tag" --repo h3y6e/skolar --dir "$dir" \
+          --pattern "skolar_*_${platform}.tar.gz" --pattern packslip.sigstore.json
+        archive=("$dir"/skolar_*_"$platform".tar.gz)
+        gh attestation verify "${archive[0]}" --bundle "$dir/packslip.sigstore.json" \
+          --repo h3y6e/skolar \
+          --signer-workflow h3y6e/skolar/.github/workflows/tagpr.yaml \
+          --predicate-type https://packslip.dev/release/v1
+        tar -xzf "${archive[0]}" -C "$dir" skolar
+        echo "$dir" >> "$GITHUB_PATH"
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token || github.token }}
+        INPUT_VERSION: ${{ inputs.version }}
+
+    - name: Update skills
+      run: |
+        args=(update -y)
+        if [[ -n "$INPUT_DIR" ]]; then
+          args+=(-d "$INPUT_DIR")
+        fi
+        skolar "${args[@]}"
+      shell: bash
+      env:
+        INPUT_DIR: ${{ inputs.dir }}
+
+    - name: Create pull request
+      id: pr
+      run: |
+        if [[ -z "$(git status --porcelain)" ]]; then
+          exit 0
+        fi
+        base=$(git branch --show-current)
+        git switch -C "$INPUT_BRANCH"
+        git add -A
+        git -c user.name='github-actions[bot]' \
+          -c user.email='41898283+github-actions[bot]@users.noreply.github.com' \
+          commit -m "$INPUT_COMMIT_MESSAGE"
+        git -c "http.$GITHUB_SERVER_URL/.extraheader=" \
+          -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+          push --force origin "$INPUT_BRANCH"
+        url=$(gh pr list --head "$INPUT_BRANCH" --base "$base" --state open --json url -q '.[0].url')
+        if [[ -n "$url" ]]; then
+          gh pr edit "$url" --title "$INPUT_TITLE" --body "$INPUT_BODY"
+        else
+          url=$(gh pr create --base "$base" --head "$INPUT_BRANCH" --title "$INPUT_TITLE" --body "$INPUT_BODY")
+        fi
+        echo "pr-url=$url" >> "$GITHUB_OUTPUT"
+        echo "pr-number=${url##*/}" >> "$GITHUB_OUTPUT"
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token || github.token }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_BODY: ${{ inputs.body }}
