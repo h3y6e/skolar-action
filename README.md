@@ -49,7 +49,7 @@ Pull requests created with the workflow `GITHUB_TOKEN` do not trigger other work
 | `branch` | no | `skolar-action/patch` | The pull request branch name. |
 | `commit-message` | no | `[skolar-action] automated change` | The message to use when committing changes. |
 | `title` | no | `Changes by skolar-action` | The title of the pull request. |
-| `body` | no | `Automated changes by skolar-action` | The body of the pull request. |
+| `body` | no | `Automated changes by [skolar-action](https://github.com/h3y6e/skolar-action)` | The body of the pull request. |
 
 ## Outputs
 
