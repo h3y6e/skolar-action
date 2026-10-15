@@ -5,7 +5,7 @@ Run [`skolar update`](https://github.com/h3y6e/skolar) and create a pull request
 ## Usage
 
 ```yaml
-name: update skills
+name: Update Skills
 
 on:
   schedule:
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: h3y6e/skolar-action@v1
+      - uses: h3y6e/skolar-action@v0.0.1
         id: skolar
 
       - name: Enable auto-merge
@@ -34,7 +34,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 ```
 
-The action downloads the skolar release for the runner, verifies it against the release's signed packslip with `gh attestation verify`, and runs `skolar update -y`. Changes are pushed to `branch` and opened as a pull request against the checked-out branch, or update the existing one.
+The action downloads the [skolar](https://github.com/h3y6e/skolar) for the runner, and runs `skolar update -y`.
+Changes are pushed to `branch` and opened as a pull request against the checked-out branch, or update the existing one.
 
 Pull requests created with the workflow `GITHUB_TOKEN` do not trigger other workflows. To run CI on them, pass a GitHub App installation token with `token`.
 
@@ -59,6 +60,5 @@ Pull requests created with the workflow `GITHUB_TOKEN` do not trigger other work
 
 ## Requirements
 
-- The caller workflow must check out a branch of the repository before using this action.
 - Linux or macOS runner with GitHub CLI installed.
 - The token must be able to push and create pull requests (`contents: write`, `pull-requests: write`).

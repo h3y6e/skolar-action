@@ -1,4 +1,4 @@
 [tagpr]
 	releaseBranch = main
-	versionFile = -
+	versionFile = README.md
 	vPrefix = true
