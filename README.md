@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: h3y6e/skolar-action@v0.0.1
+      - uses: h3y6e/skolar-action@v0.0.2
         id: skolar
 
       - name: Enable auto-merge
