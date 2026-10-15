@@ -29,7 +29,7 @@ jobs:
 
       - name: Enable auto-merge
         if: steps.skolar.outputs.pr-number != ''
-        run: gh pr merge "${{ steps.skolar.outputs.pr-number }}" --auto
+        run: gh pr merge "${{ steps.skolar.outputs.pr-number }}" --auto --merge
         env:
           GH_TOKEN: ${{ github.token }}
 ```

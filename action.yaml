@@ -51,7 +51,7 @@ runs:
           *) echo "::error::Unsupported runner: $RUNNER_OS $RUNNER_ARCH"; exit 1 ;;
         esac
         tag=${INPUT_VERSION:-$(gh release view --repo h3y6e/skolar --json tagName -q .tagName)}
-        dir="$RUNNER_TEMP/skolar"
+        dir=$(mktemp -d "$RUNNER_TEMP/skolar.XXXXXX")
         gh release download "$tag" --repo h3y6e/skolar --dir "$dir" \
           --pattern "skolar_*_${platform}.tar.gz" --pattern packslip.sigstore.json
         archive=("$dir"/skolar_*_"$platform".tar.gz)
@@ -84,6 +84,10 @@ runs:
           exit 0
         fi
         base=$(git branch --show-current)
+        if [[ "$INPUT_BRANCH" == "$base" ]]; then
+          echo "::error::branch must differ from the checked-out branch: $base"
+          exit 1
+        fi
         git switch -C "$INPUT_BRANCH"
         git add -A
         git -c user.name='github-actions[bot]' \
